@@ -1,3 +1,4 @@
 streamlit
 pandas
 finance-datareader
+pandas_ta
