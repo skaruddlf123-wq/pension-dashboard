@@ -2,4 +2,4 @@ streamlit
 pandas
 finance-datareader
 pandas-ta
-yfinance
+yfinance>=0.2.40
