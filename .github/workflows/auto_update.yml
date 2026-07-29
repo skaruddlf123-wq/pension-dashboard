@@ -1,21 +1,24 @@
 name: Auto Update Stock List
 
-# 언제 실행할 것인가? (매월 1일 자정 및 수동 버튼 클릭 시)
 on:
   schedule:
     - cron: '0 0 1 * *' 
   workflow_dispatch: 
 
+# ★ 이 3줄이 핵심입니다! 로봇에게 파일을 덮어쓸(Commit & Push) 쓰기 권한을 부여합니다.
+permissions:
+  contents: write
+
 jobs:
   update-csv:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: 1. 내 저장소 파일 가져오기
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4 # 노란색 경고문을 없애기 위해 v3 -> v4로 업데이트
 
     - name: 2. 파이썬 환경 세팅
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5 # 노란색 경고문을 없애기 위해 v4 -> v5로 업데이트
       with:
         python-version: '3.12'
 
