@@ -24,7 +24,7 @@ jobs:
 
     - name: 3. 필요 라이브러리 설치
       run: |
-        pip install pandas FinanceDataReader lxml html5lib BeautifulSoup4
+        pip install pandas finance-datareader lxml html5lib BeautifulSoup4
 
     - name: 4. 종목 리스트 업데이트 스크립트 실행
       run: python update_tickers.py
