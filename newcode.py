@@ -4,6 +4,7 @@ import pandas as pd
 import FinanceDataReader as fdr
 import pandas_ta as ta
 from datetime import datetime, timedelta
+import os
 
 # 페이지 기본 설정
 st.set_page_config(page_title="주간 트레이딩 대시보드", layout="wide")
@@ -15,6 +16,25 @@ st.markdown("""
 2. **MACD (5, 20, 9):** MACD가 Signal을 상향돌파 (Golden Cross)
 3. **RSI (30, 9):** RSI가 Signal을 상향돌파 (Golden Cross)
 """)
+
+# --- 새로 추가된 핵심 로직: 종목 리스트 캐싱 및 CSV 파일 백업 시스템 ---
+@st.cache_data(ttl=86400) 
+def get_market_list(market):
+    backup_file = f'{market}_list_backup.csv'
+    try:
+        # 1차 시도: 외부 서버에서 최신 데이터 긁어오기
+        df = fdr.StockListing(market)[['Code', 'Name']]
+        # 통신 성공 시, 혹시 모를 차단에 대비해 로컬에 몰래 최신 상태로 백업 저장
+        df.to_csv(backup_file, index=False)
+        return df
+    except Exception:
+        # 2차 시도: 에러(IP 차단 등) 발생 시 프로그램 뻗지 않고 기존 백업 파일 조용히 불러오기
+        if os.path.exists(backup_file):
+            return pd.read_csv(backup_file)
+        else:
+            st.error(f"{market} 종목 데이터를 최초로 불러오지 못했습니다. 잠시 후 다시 시도해주세요.")
+            return pd.DataFrame(columns=['Code', 'Name'])
+# --------------------------------------------------------------------
 
 @st.cache_data(show_spinner=False)
 def get_stock_data(ticker, name, include_current_week):
@@ -36,11 +56,9 @@ def get_stock_data(ticker, name, include_current_week):
         df_weekly = df_weekly.iloc[:-1]
 
     # 1. Stochastic Slow (20, 12, 12) 계산
-    # 수정: pandas_ta의 stoch 파라미터는 k, d, smooth_k 형태를 사용해야 에러가 나지 않습니다.
     stoch = df_weekly.ta.stoch(k=20, d=12, smooth_k=12)
     if stoch is not None and not stoch.empty:
         df_weekly = pd.concat([df_weekly, stoch], axis=1)
-        # pandas_ta 버전에 따른 유동적인 컬럼 매핑
         k_col, d_col = stoch.columns[0], stoch.columns[1] 
     else:
         return None
@@ -112,18 +130,18 @@ with st.sidebar:
 
 if run_button:
     with st.spinner('시장 데이터를 불러오는 중입니다...'):
-        # 1. 대상 종목 리스트 가져오기
+        # 1. 대상 종목 리스트 가져오기 (fdr.StockListing 직접 호출을 새로 만든 자동 우회 함수로 교체)
         if market_option == "샘플 종목 (5개 빠른 테스트)":
             target_list = pd.DataFrame({
                 'Code': ['005930', '000660', '035420', '035720', '005380'], 
                 'Name': ['삼성전자', 'SK하이닉스', 'NAVER', '카카오', '현대차']
             })
         elif market_option == "KOSPI 전체":
-            target_list = fdr.StockListing('KOSPI')[['Code', 'Name']]
+            target_list = get_market_list('KOSPI')
         elif market_option == "KOSDAQ 전체":
-            target_list = fdr.StockListing('KOSDAQ')[['Code', 'Name']]
+            target_list = get_market_list('KOSDAQ')
         else:
-            target_list = fdr.StockListing('KRX')[['Code', 'Name']]
+            target_list = get_market_list('KRX')
         
         # 최대 검색 종목 수 제한 적용
         if max_items > 0:
