@@ -1,0 +1,35 @@
+name: Auto Update Stock List
+
+# 언제 실행할 것인가? (매월 1일 자정 및 수동 버튼 클릭 시)
+on:
+  schedule:
+    - cron: '0 0 1 * *' 
+  workflow_dispatch: 
+
+jobs:
+  update-csv:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 1. 내 저장소 파일 가져오기
+      uses: actions/checkout@v3
+
+    - name: 2. 파이썬 환경 세팅
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: 3. 필요 라이브러리 설치
+      run: |
+        pip install pandas FinanceDataReader lxml html5lib BeautifulSoup4
+
+    - name: 4. 종목 리스트 업데이트 스크립트 실행
+      run: python update_tickers.py
+
+    - name: 5. 갱신된 CSV 파일을 깃허브에 덮어쓰기 (Commit & Push)
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add *_list_backup_v2.csv
+        git commit -m "Auto-update stock list CSVs" || echo "No changes to commit"
+        git push
